@@ -1,4 +1,4 @@
-   "use client";
+"use client";
 
 import { useEffect, useState } from "react";
 import axios from "axios";
@@ -22,13 +22,9 @@ import {
 } from "react-icons/fa6";
 
 import ExpenseChart from "../components/dashboard/ExpenseChart";
-
-// Income Components
 import IncomeForm from "../components/dashboard/income/income-form";
 import IncomeList from "../components/dashboard/income/income-list";
 import EditIncomeModal from "../components/dashboard/income/EditIncomeModal";
-
-// Expense Components
 import ExpenseForm from "../components/dashboard/expense/expense-form";
 import ExpenseList from "../components/dashboard/expense/expense-list";
 
@@ -38,10 +34,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-
 import { Button } from "@/components/ui/button";
 
-// ---------------- TOKEN ----------------
 const getToken = () => {
   if (typeof window === "undefined") return null;
   return localStorage.getItem("token");
@@ -52,323 +46,398 @@ export default function Dashboard() {
   const { setTheme, resolvedTheme } = useTheme();
 
   const [mounted, setMounted] = useState(false);
-
   const [expenses, setExpenses] = useState([]);
   const [incomes, setIncomes] = useState([]);
-
   const [refreshKey, setRefreshKey] = useState(0);
-
-  // Income Edit
   const [editOpen, setEditOpen] = useState(false);
   const [selectedIncome, setSelectedIncome] = useState(null);
+  const [activeSection, setActiveSection] = useState("overview");
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  useEffect(() => { setMounted(true); }, []);
 
-  // ---------------- TOTALS ----------------
-  const totalExpense = expenses.reduce(
-    (sum, item) => sum + Number(item.amount || 0),
-    0
-  );
-
-  const totalIncome = incomes.reduce(
-    (sum, item) => sum + Number(item.amount || 0),
-    0
-  );
-
+  const totalExpense = expenses.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+  const totalIncome = incomes.reduce((sum, item) => sum + Number(item.amount || 0), 0);
   const balance = totalIncome - totalExpense;
+  const savingsRate = totalIncome > 0 ? Math.round((balance / totalIncome) * 100) : 0;
 
-  // ---------------- FETCH EXPENSES ----------------
   const fetchExpenses = async () => {
     try {
-      const res = await axios.get("/api/expenses", {
-        headers: {
-          Authorization: `Bearer ${getToken()}`,
-        },
-      });
-
+      const res = await axios.get("/api/expenses", { headers: { Authorization: `Bearer ${getToken()}` } });
       setExpenses(res.data.expenses || []);
-    } catch (error) {
-      console.error("Expense fetch error:", error);
-      toast.error("Failed to load expenses");
-    }
+    } catch { toast.error("Failed to load expenses"); }
   };
 
-  // ---------------- FETCH INCOME ----------------
   const fetchIncome = async () => {
     try {
-      const res = await axios.get("/api/income", {
-        headers: {
-          Authorization: `Bearer ${getToken()}`,
-        },
-      });
-
+      const res = await axios.get("/api/income", { headers: { Authorization: `Bearer ${getToken()}` } });
       setIncomes(res.data.incomes || []);
-    } catch (error) {
-      console.error("Income fetch error:", error);
-      toast.error("Failed to load income");
-    }
+    } catch { toast.error("Failed to load income"); }
   };
 
-  useEffect(() => {
-    fetchExpenses();
-    fetchIncome();
-  }, [refreshKey]);
+  useEffect(() => { fetchExpenses(); fetchIncome(); }, [refreshKey]);
 
-  // ---------------- DELETE INCOME ----------------
   const deleteIncome = async (id) => {
     try {
-      await axios.delete(`/api/income?id=${id}`, {
-        headers: {
-          Authorization: `Bearer ${getToken()}`,
-        },
-      });
-
+      await axios.delete(`/api/income?id=${id}`, { headers: { Authorization: `Bearer ${getToken()}` } });
       toast.success("Income deleted");
-      setRefreshKey((prev) => prev + 1);
-    } catch (error) {
-      console.log(error);
-      toast.error("Delete failed");
-    }
+      setRefreshKey((p) => p + 1);
+    } catch { toast.error("Delete failed"); }
   };
 
-  // ---------------- DELETE EXPENSE ----------------
   const deleteExpense = async (id) => {
     try {
-      await axios.delete(`/api/expenses?id=${id}`, {
-        headers: {
-          Authorization: `Bearer ${getToken()}`,
-        },
-      });
-
+      await axios.delete(`/api/expenses?id=${id}`, { headers: { Authorization: `Bearer ${getToken()}` } });
       toast.success("Expense deleted");
-      setRefreshKey((prev) => prev + 1);
-    } catch (error) {
-      console.log(error);
-      toast.error("Failed to delete expense");
-    }
+      setRefreshKey((p) => p + 1);
+    } catch { toast.error("Failed to delete expense"); }
   };
 
-  // ---------------- EDIT INCOME ----------------
-  const handleEditIncome = (income) => {
-    setSelectedIncome(income);
-    setEditOpen(true);
-  };
+  const handleEditIncome = (income) => { setSelectedIncome(income); setEditOpen(true); };
 
   if (!mounted) return null;
 
+  const navLinks = [
+    { id: "overview", label: "Overview" },
+    { id: "income", label: "Income" },
+    { id: "expenses", label: "Expenses" },
+    { id: "analytics", label: "Analytics" },
+  ];
+
+  const summaryCards = [
+    {
+      label: "Total Income",
+      value: totalIncome,
+      icon: <FaArrowTrendUp />,
+      color: "text-emerald-500",
+      bg: "bg-emerald-500/10 dark:bg-emerald-500/15",
+      border: "border-emerald-500/20",
+    },
+    {
+      label: "Total Expenses",
+      value: totalExpense,
+      icon: <FaArrowTrendDown />,
+      color: "text-red-500",
+      bg: "bg-red-500/10 dark:bg-red-500/15",
+      border: "border-red-500/20",
+    },
+    {
+      label: "Net Balance",
+      value: balance,
+      icon: <FaScaleBalanced />,
+      color: balance >= 0 ? "text-blue-500" : "text-red-500",
+      bg: balance >= 0 ? "bg-blue-500/10 dark:bg-blue-500/15" : "bg-red-500/10",
+      border: balance >= 0 ? "border-blue-500/20" : "border-red-500/20",
+    },
+    {
+      label: "Savings Rate",
+      value: savingsRate,
+      suffix: "%",
+      icon: <FaChartLine />,
+      color: savingsRate >= 20 ? "text-violet-500" : "text-amber-500",
+      bg: savingsRate >= 20 ? "bg-violet-500/10 dark:bg-violet-500/15" : "bg-amber-500/10",
+      border: savingsRate >= 20 ? "border-violet-500/20" : "border-amber-500/20",
+    },
+  ];
+
   return (
     <AnimatePresence mode="wait">
-      <motion.div className="min-h-screen bg-background text-foreground transition-colors duration-300">
-        <Toaster position="top-right" />
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="min-h-screen bg-background text-foreground"
+      >
+        <Toaster
+          position="top-right"
+          toastOptions={{
+            style: {
+              borderRadius: "12px",
+              fontSize: "14px",
+              fontWeight: 500,
+            },
+          }}
+        />
 
-        {/* NAVBAR */}
-        <header className="sticky top-0 z-50 border-b bg-background/70 backdrop-blur-xl">
-          <div className="max-w-7xl mx-auto flex items-center justify-between px-6 py-4">
-            <motion.h1
-              whileHover={{ scale: 1.05 }}
-              className="font-bold text-2xl text-red-500 cursor-pointer flex items-center gap-2"
+        {/* ── NAVBAR ── */}
+        <header className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-2xl">
+          <div className="max-w-7xl mx-auto flex items-center justify-between px-6 py-3">
+
+            {/* Logo */}
+            <motion.button
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
               onClick={() => router.push("/")}
+              className="flex items-center gap-2.5 font-black text-xl tracking-tight"
             >
-              <FaWallet />
-              FinanceFlow
-            </motion.h1>
+              <span className="bg-red-500 text-white p-1.5 rounded-lg">
+                <FaWallet className="text-sm" />
+              </span>
+              <span>
+                Finance<span className="text-red-500">Flow</span>
+              </span>
+            </motion.button>
 
-            <Button
-              variant="outline"
-              className="flex items-center gap-2"
-              onClick={() =>
-                setTheme(
-                  resolvedTheme === "dark"
-                    ? "light"
-                    : "dark"
-                )
-              }
-            >
-              {resolvedTheme === "dark" ? (
-                <>
-                  <FaSun className="text-yellow-500" />
-                  Light Mode
-                </>
-              ) : (
-                <>
-                  <FaMoon />
-                  Dark Mode
-                </>
-              )}
-            </Button>
+            {/* Nav Links — desktop */}
+            <nav className="hidden md:flex items-center gap-1 bg-muted/60 rounded-full px-2 py-1.5">
+              {navLinks.map((link) => (
+                <button
+                  key={link.id}
+                  onClick={() => setActiveSection(link.id)}
+                  className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all duration-200 ${
+                    activeSection === link.id
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {link.label}
+                </button>
+              ))}
+            </nav>
+
+            {/* Right Actions */}
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-muted-foreground hover:text-foreground font-medium"
+                onClick={() => router.push("/login")}
+              >
+                Login
+              </Button>
+
+              <Button
+                size="sm"
+                className="bg-red-500 hover:bg-red-600 text-white font-semibold shadow-sm shadow-red-500/25 rounded-full px-5"
+                onClick={() => router.push("/register")}
+              >
+                Register
+              </Button>
+
+              {/* Theme toggle */}
+              <button
+                onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+                className="ml-1 p-2 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
+              >
+                {resolvedTheme === "dark"
+                  ? <FaSun className="text-yellow-400 text-base" />
+                  : <FaMoon className="text-base" />
+                }
+              </button>
+            </div>
           </div>
         </header>
 
-        {/* HERO */}
-        <section className="relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-red-50 via-background to-red-100 dark:from-black dark:via-zinc-950 dark:to-red-950/20" />
+        {/* ── HERO ── */}
+        <section className="relative overflow-hidden border-b border-border/40">
+          {/* Background blobs */}
+          <div className="absolute -top-32 -left-32 w-96 h-96 bg-red-500/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -bottom-20 -right-20 w-80 h-80 bg-red-500/8 rounded-full blur-3xl pointer-events-none" />
 
-          <div className="relative max-w-5xl mx-auto px-6 py-20 text-center">
+          <div className="relative max-w-6xl mx-auto px-6 py-16 flex flex-col md:flex-row items-center justify-between gap-10">
             <motion.div
-              initial={{ opacity: 0, y: 10 }}
+              initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
-              className="flex flex-col items-center gap-5"
+              transition={{ duration: 0.5 }}
+              className="flex-1 space-y-4"
             >
-              <div className="bg-red-100 dark:bg-red-900/30 p-5 rounded-full">
-                <FaWallet className="text-red-500 text-5xl" />
-              </div>
+              <span className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-red-500 bg-red-500/10 px-3 py-1.5 rounded-full">
+                <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                Personal Finance Dashboard
+              </span>
 
-              <h2 className="text-5xl md:text-7xl font-extrabold">
-                Track Your Finances Smarter
-              </h2>
+              <h1 className="text-4xl md:text-6xl font-black leading-tight tracking-tight">
+                Track Smarter,<br />
+                <span className="text-red-500">Save Better.</span>
+              </h1>
 
-              <p className="text-muted-foreground text-lg max-w-2xl">
-                Manage income, expenses, analytics,
-                and savings in one dashboard.
+              <p className="text-muted-foreground text-lg max-w-md leading-relaxed">
+                All your income, expenses, and analytics — unified in one clean dashboard.
               </p>
+            </motion.div>
+
+            {/* Mini stats strip */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.2, duration: 0.5 }}
+              className="flex-shrink-0 grid grid-cols-2 gap-3 w-full md:w-72"
+            >
+              {[
+                { label: "Income Entries", value: incomes.length, color: "text-emerald-500" },
+                { label: "Expense Entries", value: expenses.length, color: "text-red-500" },
+                { label: "Savings Rate", value: `${savingsRate}%`, color: "text-violet-500" },
+                { label: "Net Balance", value: `₹${balance.toLocaleString()}`, color: balance >= 0 ? "text-blue-500" : "text-red-500" },
+              ].map((stat) => (
+                <div
+                  key={stat.label}
+                  className="bg-muted/50 border border-border/50 rounded-2xl p-4 space-y-1"
+                >
+                  <p className={`text-xl font-black ${stat.color}`}>{stat.value}</p>
+                  <p className="text-xs text-muted-foreground font-medium">{stat.label}</p>
+                </div>
+              ))}
             </motion.div>
           </div>
         </section>
 
-        {/* DASHBOARD */}
-        <section className="max-w-6xl mx-auto p-6 space-y-6">
+        {/* ── MAIN CONTENT ── */}
+        <main className="max-w-6xl mx-auto px-6 py-10 space-y-8">
 
-          {/* SUMMARY CARDS */}
-          <div className="grid md:grid-cols-3 gap-5">
-
-            <Card className="hover:shadow-lg transition">
-              <CardHeader className="flex flex-row justify-between items-center">
-                <CardTitle>Total Income</CardTitle>
-                <FaArrowTrendUp className="text-green-500 text-xl" />
-              </CardHeader>
-
-              <CardContent className="text-3xl font-bold text-green-500">
-                ₹<CountUp end={totalIncome} duration={1.2} />
-              </CardContent>
-            </Card>
-
-            <Card className="hover:shadow-lg transition">
-              <CardHeader className="flex flex-row justify-between items-center">
-                <CardTitle>Total Expense</CardTitle>
-                <FaArrowTrendDown className="text-red-500 text-xl" />
-              </CardHeader>
-
-              <CardContent className="text-3xl font-bold text-red-500">
-                ₹<CountUp end={totalExpense} duration={1.2} />
-              </CardContent>
-            </Card>
-
-            <Card className="hover:shadow-lg transition">
-              <CardHeader className="flex flex-row justify-between items-center">
-                <CardTitle>Balance</CardTitle>
-                <FaScaleBalanced className="text-blue-500 text-xl" />
-              </CardHeader>
-
-              <CardContent
-                className={`text-3xl font-bold ${
-                  balance >= 0
-                    ? "text-green-500"
-                    : "text-red-500"
-                }`}
+          {/* Summary Cards */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {summaryCards.map((card, i) => (
+              <motion.div
+                key={card.label}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.08 }}
+                className={`relative rounded-2xl border ${card.border} ${card.bg} p-5 space-y-3 overflow-hidden`}
               >
-                ₹<CountUp end={balance} duration={1.2} />
-              </CardContent>
-            </Card>
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${card.bg} ${card.color} text-base border ${card.border}`}>
+                  {card.icon}
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">{card.label}</p>
+                  <p className={`text-2xl font-black mt-0.5 ${card.color}`}>
+                    {card.suffix ? "" : "₹"}
+                    <CountUp end={card.value} duration={1.4} separator="," />
+                    {card.suffix || ""}
+                  </p>
+                </div>
+              </motion.div>
+            ))}
           </div>
 
-          {/* ADD INCOME */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FaMoneyBillWave className="text-green-500" />
-                Add Income
-              </CardTitle>
-            </CardHeader>
+          {/* Two-column layout for forms */}
+          <div className="grid md:grid-cols-2 gap-6">
+            {/* Add Income */}
+            <motion.div
+              initial={{ opacity: 0, x: -16 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.2 }}
+            >
+              <Card className="rounded-2xl border-border/60 shadow-sm h-full">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2.5 text-base font-bold">
+                    <span className="w-8 h-8 bg-emerald-500/15 text-emerald-500 rounded-xl flex items-center justify-center text-sm">
+                      <FaMoneyBillWave />
+                    </span>
+                    Add Income
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <IncomeForm onSuccess={() => setRefreshKey((p) => p + 1)} />
+                </CardContent>
+              </Card>
+            </motion.div>
 
-            <CardContent>
-              <IncomeForm
-                onSuccess={() =>
-                  setRefreshKey((prev) => prev + 1)
-                }
-              />
-            </CardContent>
-          </Card>
+            {/* Add Expense */}
+            <motion.div
+              initial={{ opacity: 0, x: 16 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.25 }}
+            >
+              <Card className="rounded-2xl border-border/60 shadow-sm h-full">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2.5 text-base font-bold">
+                    <span className="w-8 h-8 bg-red-500/15 text-red-500 rounded-xl flex items-center justify-center text-sm">
+                      <FaReceipt />
+                    </span>
+                    Add Expense
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ExpenseForm onSuccess={() => setRefreshKey((p) => p + 1)} />
+                </CardContent>
+              </Card>
+            </motion.div>
+          </div>
 
-          {/* ADD EXPENSE */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FaReceipt className="text-red-500" />
-                Add Expense
-              </CardTitle>
-            </CardHeader>
+          {/* Income History */}
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+          >
+            <Card className="rounded-2xl border-border/60 shadow-sm">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2.5 text-base font-bold">
+                  <span className="w-8 h-8 bg-emerald-500/15 text-emerald-500 rounded-xl flex items-center justify-center text-sm">
+                    <FaChartLine />
+                  </span>
+                  Income History
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <IncomeList
+                  refreshKey={refreshKey}
+                  onEdit={handleEditIncome}
+                  onDelete={deleteIncome}
+                />
+              </CardContent>
+            </Card>
+          </motion.div>
 
-            <CardContent>
-              <ExpenseForm
-                onSuccess={() =>
-                  setRefreshKey((prev) => prev + 1)
-                }
-              />
-            </CardContent>
-          </Card>
+          {/* Expense History */}
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.35 }}
+          >
+            <Card className="rounded-2xl border-border/60 shadow-sm">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2.5 text-base font-bold">
+                  <span className="w-8 h-8 bg-red-500/15 text-red-500 rounded-xl flex items-center justify-center text-sm">
+                    <FaMoneyBillWave />
+                  </span>
+                  Expense History
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ExpenseList refreshKey={refreshKey} onDelete={deleteExpense} />
+              </CardContent>
+            </Card>
+          </motion.div>
 
-          {/* INCOME LIST */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FaChartLine className="text-green-500" />
-                Income History
-              </CardTitle>
-            </CardHeader>
+          {/* Analytics Chart */}
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+          >
+            <Card className="rounded-2xl border-border/60 shadow-sm">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2.5 text-base font-bold">
+                  <span className="w-8 h-8 bg-blue-500/15 text-blue-500 rounded-xl flex items-center justify-center text-sm">
+                    <FaChartPie />
+                  </span>
+                  Expense Analytics
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ExpenseChart expenses={expenses} />
+              </CardContent>
+            </Card>
+          </motion.div>
 
-            <CardContent>
-              <IncomeList
-                refreshKey={refreshKey}
-                onEdit={handleEditIncome}
-                onDelete={deleteIncome}
-              />
-            </CardContent>
-          </Card>
+        </main>
 
-          {/* EXPENSE LIST */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FaMoneyBillWave className="text-red-500" />
-                Expense History
-              </CardTitle>
-            </CardHeader>
+        {/* ── FOOTER ── */}
+        <footer className="border-t border-border/40 mt-10">
+          <div className="max-w-6xl mx-auto px-6 py-6 flex items-center justify-between text-sm text-muted-foreground">
+            <span className="flex items-center gap-2 font-semibold text-foreground">
+              <FaWallet className="text-red-500" /> FinanceFlow
+            </span>
+            <span>© {new Date().getFullYear()} · All rights reserved</span>
+          </div>
+        </footer>
 
-            <CardContent>
-              <ExpenseList
-                refreshKey={refreshKey}
-                onDelete={deleteExpense}
-              />
-            </CardContent>
-          </Card>
-
-          {/* CHART */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FaChartPie className="text-blue-500" />
-                Expense Analytics
-              </CardTitle>
-            </CardHeader>
-
-            <CardContent>
-              <ExpenseChart expenses={expenses} />
-            </CardContent>
-          </Card>
-        </section>
-
-        {/* EDIT INCOME MODAL */}
         <EditIncomeModal
           open={editOpen}
           onClose={() => setEditOpen(false)}
           income={selectedIncome}
-          onUpdated={() =>
-            setRefreshKey((prev) => prev + 1)
-          }
+          onUpdated={() => setRefreshKey((p) => p + 1)}
         />
       </motion.div>
     </AnimatePresence>
   );
-}   
+}
