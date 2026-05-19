@@ -20,9 +20,16 @@ export default function ExpenseList({
     try {
       setLoading(true);
 
+      const token = getToken();
+      if (!token) {
+        setExpenses([]);
+        setLoading(false);
+        return;
+      }
+
       const res = await fetch("/api/expenses", {
         headers: {
-          Authorization: `Bearer ${getToken()}`,
+          Authorization: `Bearer ${token}`,
         },
       });
 

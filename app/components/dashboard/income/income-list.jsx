@@ -16,9 +16,16 @@ export default function IncomeList({ refreshKey = 0, onEdit, onDelete }) {
     try {
       setLoading(true);
 
+      const token = getToken();
+      if (!token) {
+        setIncomes([]);
+        setLoading(false);
+        return;
+      }
+
       const res = await fetch("/api/income", {
         headers: {
-          Authorization: `Bearer ${getToken()}`,
+          Authorization: `Bearer ${token}`,
         },
       });
 

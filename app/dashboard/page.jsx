@@ -46,6 +46,7 @@ export default function Dashboard() {
   const { setTheme, resolvedTheme } = useTheme();
 
   const [mounted, setMounted] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [expenses, setExpenses] = useState([]);
   const [incomes, setIncomes] = useState([]);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -53,7 +54,10 @@ export default function Dashboard() {
   const [selectedIncome, setSelectedIncome] = useState(null);
   const [activeSection, setActiveSection] = useState("overview");
 
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    setMounted(true);
+    setIsLoggedIn(!!getToken());
+  }, []);
 
   const totalExpense = expenses.reduce((sum, item) => sum + Number(item.amount || 0), 0);
   const totalIncome = incomes.reduce((sum, item) => sum + Number(item.amount || 0), 0);
@@ -61,20 +65,46 @@ export default function Dashboard() {
   const savingsRate = totalIncome > 0 ? Math.round((balance / totalIncome) * 100) : 0;
 
   const fetchExpenses = async () => {
+    const token = getToken();
+    if (!token) return;
     try {
-      const res = await axios.get("/api/expenses", { headers: { Authorization: `Bearer ${getToken()}` } });
+      const res = await axios.get("/api/expenses", { headers: { Authorization: `Bearer ${token}` } });
       setExpenses(res.data.expenses || []);
-    } catch { toast.error("Failed to load expenses"); }
+    } catch (err) {
+      if (err.response?.status === 401) {
+        toast.error("not able to logged in");
+      } else {
+        toast.error("Failed to load expenses");
+      }
+    }
   };
 
   const fetchIncome = async () => {
+    const token = getToken();
+    if (!token) return;
     try {
-      const res = await axios.get("/api/income", { headers: { Authorization: `Bearer ${getToken()}` } });
+      const res = await axios.get("/api/income", { headers: { Authorization: `Bearer ${token}` } });
       setIncomes(res.data.incomes || []);
-    } catch { toast.error("Failed to load income"); }
+    } catch (err) {
+      if (err.response?.status === 401) {
+        toast.error("not able to logged in");
+      } else {
+        toast.error("Failed to load income");
+      }
+    }
   };
 
-  useEffect(() => { fetchExpenses(); fetchIncome(); }, [refreshKey]);
+  useEffect(() => {
+    const token = getToken();
+    if (!token) {
+      toast.error("not able to logged in");
+      setIsLoggedIn(false);
+      return;
+    }
+    setIsLoggedIn(true);
+    fetchExpenses();
+    fetchIncome();
+  }, [refreshKey]);
 
   const deleteIncome = async (id) => {
     try {
@@ -93,6 +123,15 @@ export default function Dashboard() {
   };
 
   const handleEditIncome = (income) => { setSelectedIncome(income); setEditOpen(true); };
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    setIsLoggedIn(false);
+    setExpenses([]);
+    setIncomes([]);
+    toast.success("Logged out successfully");
+    router.push("/login");
+  };
 
   if (!mounted) return null;
 
@@ -195,22 +234,35 @@ export default function Dashboard() {
 
             {/* Right Actions */}
             <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-muted-foreground hover:text-foreground font-medium"
-                onClick={() => router.push("/login")}
-              >
-                Login
-              </Button>
+              {isLoggedIn ? (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-muted-foreground hover:text-foreground font-medium"
+                  onClick={handleLogout}
+                >
+                  Logout
+                </Button>
+              ) : (
+                <>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-muted-foreground hover:text-foreground font-medium"
+                    onClick={() => router.push("/login")}
+                  >
+                    Login
+                  </Button>
 
-              <Button
-                size="sm"
-                className="bg-red-500 hover:bg-red-600 text-white font-semibold shadow-sm shadow-red-500/25 rounded-full px-5"
-                onClick={() => router.push("/register")}
-              >
-                Register
-              </Button>
+                  <Button
+                    size="sm"
+                    className="bg-red-500 hover:bg-red-600 text-white font-semibold shadow-sm shadow-red-500/25 rounded-full px-5"
+                    onClick={() => router.push("/register")}
+                  >
+                    Register
+                  </Button>
+                </>
+              )}
 
               {/* Theme toggle */}
               <button
