@@ -1,6 +1,7 @@
 "use client";
 
 import { PieChart, Pie, Cell, Tooltip } from "recharts";
+import { FaChartPie } from "react-icons/fa6";
 
 export default function ExpenseChart({ expenses }) {
   const data = expenses.reduce((acc, exp) => {
@@ -30,8 +31,8 @@ export default function ExpenseChart({ expenses }) {
 
   return (
     <div className="p-4 border rounded mt-6">
-      <h2 className="text-lg font-semibold mb-4">
-        Expense Breakdown 📊
+      <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+        Expense Breakdown <FaChartPie className="text-red-500" />
       </h2>
 
       <PieChart width={300} height={300}>

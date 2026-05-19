@@ -81,7 +81,7 @@ export async function POST(req) {
       process.env.JWT_SECRET
     );
 
-    const { source, amount, note } =
+    const { source, amount, category, note } =
       await req.json();
 
     if (!source || !amount) {
@@ -99,6 +99,7 @@ export async function POST(req) {
       userId: decoded.userId,
       source,
       amount,
+      category: category || "General",
       note,
     });
 
@@ -170,6 +171,7 @@ export async function PUT(req) {
         {
           source: body.source,
           amount: body.amount,
+          category: body.category || "General",
           note: body.note,
         },
         {

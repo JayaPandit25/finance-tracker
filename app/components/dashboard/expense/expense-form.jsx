@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import toast from "react-hot-toast";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { FaCircleCheck } from "react-icons/fa6";
 
 export default function ExpenseForm({ onSuccess }) {
   const [form, setForm] = useState({
@@ -23,7 +25,7 @@ export default function ExpenseForm({ onSuccess }) {
     e.preventDefault();
 
     if (!form.title || !form.amount || !form.category) {
-      alert("Title, Amount and Category are required");
+      toast.error("Title, Amount and Category are required");
       return;
     }
 
@@ -49,13 +51,18 @@ export default function ExpenseForm({ onSuccess }) {
           note: "",
         });
 
+        toast.success(
+          <span className="flex items-center gap-1.5">
+            Expense added successfully <FaCircleCheck className="text-emerald-500" />
+          </span>
+        );
         onSuccess?.();
       } else {
-        alert(data.message || "Failed to add expense");
+        toast.error(data.message || "Failed to add expense");
       }
     } catch (err) {
-      console.log(err);
-      alert("Something went wrong");
+      console.error(err);
+      toast.error("Something went wrong");
     } finally {
       setLoading(false);
     }

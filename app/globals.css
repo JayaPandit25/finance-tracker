@@ -1,7 +1,8 @@
 /* =========================
    GOOGLE FONT
 ========================= */
-@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Outfit:wght@300..900&family=Syne:wght@700..800&family=Manrope:wght@200..800&display=swap");
+
 
 /* =========================
    TAILWIND
@@ -45,6 +46,8 @@
 
   --font-sans: var(--font-sans);
   --font-mono: var(--font-mono);
+  --font-outfit: var(--font-outfit);
+  --font-syne: var(--font-syne);
 
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
@@ -57,6 +60,8 @@
 ========================= */
 :root {
   --font-sans: "Manrope", sans-serif;
+  --font-outfit: "Outfit", sans-serif;
+  --font-syne: "Syne", sans-serif;
   --font-mono: monospace;
 
   --radius: 0.75rem;

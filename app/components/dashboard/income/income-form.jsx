@@ -1,13 +1,16 @@
 "use client";
 
 import { useState } from "react";
+import toast from "react-hot-toast";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { FaCircleCheck } from "react-icons/fa6";
 
 export default function IncomeForm({ onSuccess }) {
   const [form, setForm] = useState({
     source: "",
     amount: "",
+    category: "",
     note: "",
   });
 
@@ -21,8 +24,8 @@ export default function IncomeForm({ onSuccess }) {
   async function handleSubmit(e) {
     e.preventDefault();
 
-    if (!form.source || !form.amount) {
-      alert("Source and Amount are required");
+    if (!form.source || !form.amount || !form.category) {
+      toast.error("Source, Amount and Category are required");
       return;
     }
 
@@ -41,14 +44,19 @@ export default function IncomeForm({ onSuccess }) {
       const data = await res.json();
 
       if (data.success) {
-        setForm({ source: "", amount: "", note: "" });
+        setForm({ source: "", amount: "", category: "", note: "" });
+        toast.success(
+          <span className="flex items-center gap-1.5">
+            Income added successfully <FaCircleCheck className="text-emerald-500" />
+          </span>
+        );
         onSuccess?.();
       } else {
-        alert(data.message || "Failed to add income");
+        toast.error(data.message || "Failed to add income");
       }
     } catch (err) {
-      console.log(err);
-      alert("Something went wrong");
+      console.error(err);
+      toast.error("Something went wrong");
     } finally {
       setLoading(false);
     }
@@ -71,6 +79,14 @@ export default function IncomeForm({ onSuccess }) {
         value={form.amount}
         onChange={(e) =>
           setForm({ ...form, amount: e.target.value })
+        }
+      />
+
+      <Input
+        placeholder="Category (Salary, Freelance, Gift)"
+        value={form.category}
+        onChange={(e) =>
+          setForm({ ...form, category: e.target.value })
         }
       />
 

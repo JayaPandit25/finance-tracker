@@ -27,6 +27,9 @@ import IncomeList from "../components/dashboard/income/income-list";
 import EditIncomeModal from "../components/dashboard/income/EditIncomeModal";
 import ExpenseForm from "../components/dashboard/expense/expense-form";
 import ExpenseList from "../components/dashboard/expense/expense-list";
+import BudgetCard from "../components/dashboard/budget/BudgetCard";
+import GoalsManager from "../components/dashboard/goals/GoalsManager";
+import FinancialInsights from "../components/dashboard/insights/FinancialInsights";
 
 import {
   Card,
@@ -53,6 +56,55 @@ export default function Dashboard() {
   const [editOpen, setEditOpen] = useState(false);
   const [selectedIncome, setSelectedIncome] = useState(null);
   const [activeSection, setActiveSection] = useState("overview");
+
+  // Smooth scroll handler with offset for sticky navbar
+  const scrollToSection = (id) => {
+    setActiveSection(id);
+    const element = document.getElementById(id);
+    if (element) {
+      const yOffset = -90; // offset to account for sticky navbar and add padding
+      const y = element.getBoundingClientRect().top + window.pageYOffset + yOffset;
+      window.scrollTo({ top: y, behavior: "smooth" });
+    }
+  };
+
+  // Scrollspy to automatically highlight the current section on scroll
+  useEffect(() => {
+    if (!mounted) return;
+
+    const sections = ["overview", "income", "expenses", "goals", "analytics"];
+    
+    const handleScroll = () => {
+      const scrollPosition = window.scrollY;
+      
+      // If we are near the top of the page, set overview active
+      if (scrollPosition < 100) {
+        setActiveSection("overview");
+        return;
+      }
+
+      // Check which section is currently in view
+      let currentSection = "overview";
+      for (const id of sections) {
+        const el = document.getElementById(id);
+        if (el) {
+          const rect = el.getBoundingClientRect();
+          if (rect.top <= 150) {
+            currentSection = id;
+          }
+        }
+      }
+      setActiveSection(currentSection);
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    const timer = setTimeout(handleScroll, 100);
+
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      clearTimeout(timer);
+    };
+  }, [mounted]);
 
   useEffect(() => {
     setMounted(true);
@@ -139,6 +191,7 @@ export default function Dashboard() {
     { id: "overview", label: "Overview" },
     { id: "income", label: "Income" },
     { id: "expenses", label: "Expenses" },
+    { id: "goals", label: "Savings Goals" },
     { id: "analytics", label: "Analytics" },
   ];
 
@@ -220,7 +273,7 @@ export default function Dashboard() {
               {navLinks.map((link) => (
                 <button
                   key={link.id}
-                  onClick={() => setActiveSection(link.id)}
+                  onClick={() => scrollToSection(link.id)}
                   className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all duration-200 ${
                     activeSection === link.id
                       ? "bg-background text-foreground shadow-sm"
@@ -278,7 +331,7 @@ export default function Dashboard() {
           </div>
         </header>
         {/* ── HERO ── */}
-<section className="relative overflow-hidden border-b border-border/40">
+        <section id="overview" className="relative overflow-hidden border-b border-border/40">
   {/* Background blobs */}
   <div className="absolute -top-32 -left-32 w-96 h-96 bg-red-500/10 rounded-full blur-3xl pointer-events-none" />
   <div className="absolute -bottom-20 -right-20 w-80 h-80 bg-red-500/8 rounded-full blur-3xl pointer-events-none" />
@@ -415,53 +468,71 @@ export default function Dashboard() {
             ))}
           </div>
 
-          {/* Two-column layout for forms */}
-          <div className="grid md:grid-cols-2 gap-6">
-            {/* Add Income */}
-            <motion.div
-              initial={{ opacity: 0, x: -16 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.2 }}
-            >
-              <Card className="rounded-2xl border-border/60 shadow-sm h-full">
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center gap-2.5 text-base font-bold">
-                    <span className="w-8 h-8 bg-emerald-500/15 text-emerald-500 rounded-xl flex items-center justify-center text-sm">
-                      <FaMoneyBillWave />
-                    </span>
-                    Add Income
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <IncomeForm onSuccess={() => setRefreshKey((p) => p + 1)} />
-                </CardContent>
-              </Card>
-            </motion.div>
+          {/* Main interactive layout */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+            {/* Forms Section (Left Side) */}
+            <div className="lg:col-span-2 grid md:grid-cols-2 gap-6">
+              {/* Add Income */}
+              <motion.div
+                initial={{ opacity: 0, x: -16 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.2 }}
+              >
+                <Card className="rounded-2xl border-border/60 shadow-sm h-full">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="flex items-center gap-2.5 text-base font-bold">
+                      <span className="w-8 h-8 bg-emerald-500/15 text-emerald-500 rounded-xl flex items-center justify-center text-sm">
+                        <FaMoneyBillWave />
+                      </span>
+                      Add Income
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <IncomeForm onSuccess={() => setRefreshKey((p) => p + 1)} />
+                  </CardContent>
+                </Card>
+              </motion.div>
 
-            {/* Add Expense */}
+              {/* Add Expense */}
+              <motion.div
+                initial={{ opacity: 0, x: 16 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.25 }}
+              >
+                <Card className="rounded-2xl border-border/60 shadow-sm h-full">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="flex items-center gap-2.5 text-base font-bold">
+                      <span className="w-8 h-8 bg-red-500/15 text-red-500 rounded-xl flex items-center justify-center text-sm">
+                        <FaReceipt />
+                      </span>
+                      Add Expense
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ExpenseForm onSuccess={() => setRefreshKey((p) => p + 1)} />
+                  </CardContent>
+                </Card>
+              </motion.div>
+            </div>
+
+            {/* Budget Card Section (Right Side) */}
             <motion.div
-              initial={{ opacity: 0, x: 16 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.25 }}
+              initial={{ opacity: 0, scale: 0.97 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.28 }}
+              className="lg:col-span-1"
             >
-              <Card className="rounded-2xl border-border/60 shadow-sm h-full">
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center gap-2.5 text-base font-bold">
-                    <span className="w-8 h-8 bg-red-500/15 text-red-500 rounded-xl flex items-center justify-center text-sm">
-                      <FaReceipt />
-                    </span>
-                    Add Expense
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ExpenseForm onSuccess={() => setRefreshKey((p) => p + 1)} />
-                </CardContent>
-              </Card>
+              <BudgetCard
+                totalExpense={totalExpense}
+                refreshKey={refreshKey}
+                onBudgetUpdated={() => setRefreshKey((p) => p + 1)}
+              />
             </motion.div>
           </div>
 
           {/* Income History */}
           <motion.div
+            id="income"
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
@@ -487,6 +558,7 @@ export default function Dashboard() {
 
           {/* Expense History */}
           <motion.div
+            id="expenses"
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.35 }}
@@ -506,26 +578,63 @@ export default function Dashboard() {
             </Card>
           </motion.div>
 
-          {/* Analytics Chart */}
+          {/* Savings Goals Section */}
           <motion.div
+            id="goals"
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
+            transition={{ delay: 0.38 }}
           >
             <Card className="rounded-2xl border-border/60 shadow-sm">
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2.5 text-base font-bold">
-                  <span className="w-8 h-8 bg-blue-500/15 text-blue-500 rounded-xl flex items-center justify-center text-sm">
-                    <FaChartPie />
-                  </span>
-                  Expense Analytics
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ExpenseChart expenses={expenses} />
+              <CardContent className="pt-6">
+                <GoalsManager
+                  refreshKey={refreshKey}
+                  onGoalUpdated={() => setRefreshKey((p) => p + 1)}
+                />
               </CardContent>
             </Card>
           </motion.div>
+
+          {/* Analytics Chart & Smart Financial Insights */}
+          <div id="analytics" className="space-y-6">
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+            >
+              <Card className="rounded-2xl border-border/60 shadow-sm">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2.5 text-base font-bold">
+                    <span className="w-8 h-8 bg-blue-500/15 text-blue-500 rounded-xl flex items-center justify-center text-sm">
+                      <FaChartPie />
+                    </span>
+                    Expense Analytics
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ExpenseChart expenses={expenses} />
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.42 }}
+            >
+              <Card className="rounded-2xl border-border/60 shadow-sm">
+                <CardContent className="pt-6">
+                  <FinancialInsights
+                    totalIncome={totalIncome}
+                    totalExpense={totalExpense}
+                    balance={balance}
+                    savingsRate={savingsRate}
+                    expenses={expenses}
+                  />
+                </CardContent>
+              </Card>
+            </motion.div>
+          </div>
 
         </main>
 

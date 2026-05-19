@@ -1,6 +1,7 @@
 import connectDB from "@/lib/mongodb";
 import User from "@/models/User";
 import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
 
 export async function POST(req) {
   try {
@@ -29,10 +30,18 @@ export async function POST(req) {
       password: hashedPassword,
     });
 
-    // ✅ IMPORTANT: do NOT return password
+    // Create JWT token
+    const token = jwt.sign(
+      { userId: user._id, email: user.email },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
+    // IMPORTANT: do NOT return password
     return Response.json({
       success: true,
       message: "User Registered Successfully",
+      token,
       user: {
         id: user._id,
         name: user.name,

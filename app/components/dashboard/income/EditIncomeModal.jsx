@@ -10,6 +10,7 @@ export default function EditIncomeModal({ open, onClose, income, onUpdated }) {
   const [form, setForm] = useState({
     source: "",
     amount: "",
+    category: "",
     note: "",
   });
 
@@ -18,6 +19,7 @@ export default function EditIncomeModal({ open, onClose, income, onUpdated }) {
       setForm({
         source: income.source,
         amount: income.amount,
+        category: income.category || income.source || "",
         note: income.note || "",
       });
     }
@@ -71,6 +73,14 @@ export default function EditIncomeModal({ open, onClose, income, onUpdated }) {
             }
             placeholder="Amount"
             type="number"
+          />
+
+          <Input
+            value={form.category}
+            onChange={(e) =>
+              setForm({ ...form, category: e.target.value })
+            }
+            placeholder="Category"
           />
 
           <Input
