@@ -48,49 +48,21 @@ export async function POST(req) {
     await Otp.deleteOne({ _id: otpDoc._id });
 
     // Look up if user already exists
-    let user = await User.findOne({ email });
-    let isNewUser = false;
+    const user = await User.findOne({ email });
+    const userExists = !!user;
 
-    if (!user) {
-      // Auto-register the user (Passwordless OTP Signup)
-      isNewUser = true;
-
-      // Generate a default display name from email (e.g., jayap from jayap@example.com)
-      const emailPrefix = email.split("@")[0];
-      const displayName = emailPrefix.charAt(0).toUpperCase() + emailPrefix.slice(1);
-
-      // Generate a strong random password for security since password field is required
-      const randomPassword = Math.random().toString(36).slice(-10) + Math.random().toString(36).slice(-10);
-      const hashedPassword = await bcrypt.hash(randomPassword, 10);
-
-      user = await User.create({
-        name: displayName,
-        email,
-        password: hashedPassword,
-        currency: "INR", // Default currency
-      });
-    }
-
-    // Create JWT token
-    const token = jwt.sign(
-      { userId: user._id, email: user.email },
+    // Create a secure temporary token indicating OTP has been verified
+    const tempToken = jwt.sign(
+      { email, otpVerified: true },
       process.env.JWT_SECRET,
-      { expiresIn: "7d" }
+      { expiresIn: "10m" }
     );
 
     return Response.json({
       success: true,
-      message: isNewUser
-        ? "Welcome! Account created and logged in successfully."
-        : "Login successful! Welcome back.",
-      token,
-      isNewUser,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        currency: user.currency,
-      },
+      message: "OTP verified successfully. Please proceed with password entry.",
+      tempToken,
+      userExists,
     });
 
   } catch (error) {
@@ -102,3 +74,4 @@ export async function POST(req) {
     });
   }
 }
+

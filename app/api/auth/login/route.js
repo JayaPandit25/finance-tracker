@@ -7,10 +7,37 @@ export async function POST(req) {
   try {
     await connectDB();
 
-    const { email, password } = await req.json();
+    const { email, password, tempToken } = await req.json();
+
+    let emailToUse = email;
+
+    if (tempToken) {
+      try {
+        const decoded = jwt.verify(tempToken, process.env.JWT_SECRET);
+        if (!decoded.otpVerified) {
+          return Response.json({
+            success: false,
+            message: "Invalid OTP verification state",
+          });
+        }
+        emailToUse = decoded.email;
+      } catch (err) {
+        return Response.json({
+          success: false,
+          message: "OTP verification session has expired. Please request a new OTP.",
+        });
+      }
+    }
+
+    if (!emailToUse) {
+      return Response.json({
+        success: false,
+        message: "Email is required",
+      });
+    }
 
     // Check user exists
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email: emailToUse });
 
     if (!user) {
       return Response.json({
@@ -54,4 +81,4 @@ export async function POST(req) {
       error: error.message,
     });
   }
-}
+}

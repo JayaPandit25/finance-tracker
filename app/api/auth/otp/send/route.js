@@ -1,4 +1,5 @@
 import connectDB from "@/lib/mongodb";
+import User from "@/models/User";
 import Otp from "@/models/Otp";
 import { sendOtpEmail } from "@/lib/email";
 
@@ -14,6 +15,10 @@ export async function POST(req) {
         message: "Email address is required",
       });
     }
+
+    // Check if user exists
+    const user = await User.findOne({ email });
+    const userExists = !!user;
 
     // Generate a 6-digit OTP code
     const code = Math.floor(100000 + Math.random() * 900000).toString();
@@ -35,6 +40,7 @@ export async function POST(req) {
     return Response.json({
       success: true,
       message: "Verification code sent to your email address.",
+      userExists,
     });
 
   } catch (error) {
@@ -46,3 +52,4 @@ export async function POST(req) {
     });
   }
 }
+

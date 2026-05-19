@@ -13,12 +13,11 @@ import {
   FaEye, 
   FaEyeSlash, 
   FaArrowRight, 
-  FaFaceSmile,
-  FaKey,
-  FaArrowLeft,
-  FaPaperPlane,
-  FaCircleCheck,
-  FaFingerprint
+  FaKey, 
+  FaArrowLeft, 
+  FaUser, 
+  FaCircleCheck, 
+  FaSpinner 
 } from "react-icons/fa6";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,26 +26,24 @@ import { Input } from "@/components/ui/input";
 export default function LoginPage() {
   const router = useRouter();
 
-  // Tab State: 'password' | 'otp'
-  const [loginMethod, setLoginMethod] = useState("password");
+  // Unified flow steps: "email" | "otp" | "password"
+  const [step, setStep] = useState("email");
   
-  // Password login form
-  const [form, setForm] = useState({
-    email: "",
-    password: "",
-  });
-
-  // OTP flow states
-  const [otpEmail, setOtpEmail] = useState("");
-  const [otpStep, setOtpStep] = useState("email"); // 'email' | 'code'
+  // Inputs
+  const [email, setEmail] = useState("");
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
+  const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
+
+  // System states
+  const [userExists, setUserExists] = useState(true);
+  const [tempToken, setTempToken] = useState("");
   const [timer, setTimer] = useState(0);
-  
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const otpInputRefs = useRef([]);
 
-  // Timer countdown effect for OTP resend
+  // Countdown timer for resending OTP
   useEffect(() => {
     let interval = null;
     if (timer > 0) {
@@ -59,62 +56,23 @@ export default function LoginPage() {
     return () => clearInterval(interval);
   }, [timer]);
 
-  // Handle standard password login inputs
-  const handleChange = (e) => {
-    setForm({
-      ...form,
-      [e.target.name]: e.target.value,
-    });
-  };
-
-  // Password login submit handler
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-
-    try {
-      const res = await axios.post("/api/auth/login", form);
-
-      if (res.data.success) {
-        localStorage.setItem("token", res.data.token);
-        
-        toast.success(
-          <span className="flex items-center gap-1.5">
-            Welcome back! Login successful. <FaFaceSmile className="text-red-500" />
-          </span>,
-          { duration: 3000 }
-        );
-
-        router.push("/dashboard");
-      } else {
-        toast.error(res.data.message || "Invalid credentials. Please try again.");
-      }
-    } catch (err) {
-      console.error(err);
-      toast.error(err.response?.data?.message || "An error occurred. Please try again later.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Trigger Send OTP API
+  // Handler: Send OTP (Step 1)
   const handleSendOtp = async (e) => {
     if (e) e.preventDefault();
-    if (!otpEmail) {
+    if (!email) {
       toast.error("Please enter a valid email address.");
       return;
     }
 
     setLoading(true);
     try {
-      const res = await axios.post("/api/auth/otp/send", { email: otpEmail });
+      const res = await axios.post("/api/auth/otp/send", { email });
 
       if (res.data.success) {
-        toast.success(res.data.message);
-        
-        setOtpStep("code");
-        setTimer(60); // 60 seconds resend cooldown
-        // Clear previous input
+        toast.success(res.data.message || "OTP code sent successfully!");
+        setUserExists(res.data.userExists);
+        setStep("otp");
+        setTimer(60);
         setOtp(["", "", "", "", "", ""]);
         setTimeout(() => {
           if (otpInputRefs.current[0]) otpInputRefs.current[0].focus();
@@ -130,16 +88,107 @@ export default function LoginPage() {
     }
   };
 
-  // Handle individual OTP digital inputs
-  const handleOtpChange = (index, value) => {
-    // Only allow single numeric inputs
-    if (/[^0-9]/.test(value)) return;
+  // Handler: Verify OTP (Step 2)
+  const handleVerifyOtp = async (e) => {
+    if (e) e.preventDefault();
+    const verificationCode = otp.join("");
+    if (verificationCode.length !== 6) {
+      toast.error("Please enter a complete 6-digit code.");
+      return;
+    }
 
+    setLoading(true);
+    try {
+      const res = await axios.post("/api/auth/otp/verify", {
+        email,
+        code: verificationCode,
+      });
+
+      if (res.data.success) {
+        setTempToken(res.data.tempToken);
+        setUserExists(res.data.userExists);
+        setStep("password");
+        toast.success("OTP verified successfully!");
+      } else {
+        toast.error(res.data.message || "Invalid or expired OTP code.");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error(err.response?.data?.message || "An error occurred during verification.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handler: Complete Authentication (Step 3)
+  const handleCompleteAuth = async (e) => {
+    e.preventDefault();
+    if (!password) {
+      toast.error("Please enter a password.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      if (userExists) {
+        // Log in existing user
+        const res = await axios.post("/api/auth/login", {
+          tempToken,
+          password,
+        });
+
+        if (res.data.success) {
+          localStorage.setItem("token", res.data.token);
+          toast.success(
+            <span className="flex items-center gap-1.5">
+              Welcome back! Login successful. <FaCircleCheck className="text-red-500" />
+            </span>
+          );
+          router.push("/dashboard");
+        } else {
+          toast.error(res.data.message || "Invalid credentials. Please try again.");
+        }
+      } else {
+        // Register new user
+        if (!name) {
+          toast.error("Please enter your name.");
+          setLoading(false);
+          return;
+        }
+
+        const res = await axios.post("/api/auth/register", {
+          name,
+          tempToken,
+          password,
+        });
+
+        if (res.data.success) {
+          localStorage.setItem("token", res.data.token);
+          toast.success(
+            <span className="flex items-center gap-1.5">
+              Welcome! Account created successfully. <FaCircleCheck className="text-red-500" />
+            </span>
+          );
+          router.push("/dashboard");
+        } else {
+          toast.error(res.data.message || "Failed to create account. Please try again.");
+        }
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error(err.response?.data?.message || "An error occurred. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // OTP inputs key events
+  const handleOtpChange = (index, value) => {
+    if (/[^0-9]/.test(value)) return;
     const newOtp = [...otp];
     newOtp[index] = value.substring(value.length - 1);
     setOtp(newOtp);
 
-    // Auto-focus next input if filled
     if (value && index < 5) {
       otpInputRefs.current[index + 1].focus();
     }
@@ -161,47 +210,6 @@ export default function LoginPage() {
       const digits = pastedData.split("");
       setOtp(digits);
       otpInputRefs.current[5].focus();
-    }
-  };
-
-  // Trigger Verify OTP API
-  const handleVerifyOtp = async (e) => {
-    e.preventDefault();
-    const verificationCode = otp.join("");
-    if (verificationCode.length !== 6) {
-      toast.error("Please enter a complete 6-digit code.");
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const res = await axios.post("/api/auth/otp/verify", {
-        email: otpEmail,
-        code: verificationCode,
-      });
-
-      if (res.data.success) {
-        localStorage.setItem("token", res.data.token);
-        
-        toast.success(
-          <span className="flex items-center gap-1.5">
-            {res.data.isNewUser 
-              ? "Welcome to FinanceFlow! Account created successfully." 
-              : "Welcome back! Login successful."}
-            <FaCircleCheck className="text-red-500" />
-          </span>,
-          { duration: 4000 }
-        );
-
-        router.push("/dashboard");
-      } else {
-        toast.error(res.data.message || "Invalid or expired OTP code.");
-      }
-    } catch (err) {
-      console.error(err);
-      toast.error(err.response?.data?.message || "An error occurred during verification.");
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -237,66 +245,71 @@ export default function LoginPage() {
           </p>
         </div>
 
-        <Card className="border-border/60 shadow-xl bg-card/70 backdrop-blur-xl rounded-2xl overflow-hidden">
-          {/* Custom Tabs */}
-          <div className="flex border-b border-border/50 bg-muted/10">
-            <button
-              onClick={() => {
-                setLoginMethod("password");
-              }}
-              className={`flex-1 py-3 text-sm font-semibold transition-all duration-200 border-b-2 flex items-center justify-center gap-2 ${
-                loginMethod === "password"
-                  ? "border-red-500 text-foreground bg-muted/20"
-                  : "border-transparent text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              <FaLock className="text-xs" />
-              Password Login
-            </button>
-            <button
-              onClick={() => setLoginMethod("otp")}
-              className={`flex-1 py-3 text-sm font-semibold transition-all duration-200 border-b-2 flex items-center justify-center gap-2 ${
-                loginMethod === "otp"
-                  ? "border-red-500 text-foreground bg-muted/20"
-                  : "border-transparent text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              <FaFingerprint className="text-xs" />
-              OTP / Code Login
-            </button>
+        {/* Step Progress Bar */}
+        <div className="flex items-center justify-center gap-4 mb-6 px-8">
+          <div className="flex items-center gap-2">
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${
+              step === "email" ? "bg-red-500 text-white shadow-md shadow-red-500/25 ring-2 ring-red-500/50" : "bg-red-500 text-white"
+            }`}>
+              <FaEnvelope />
+            </div>
+            <span className={`text-xs font-semibold ${step === "email" ? "text-foreground" : "text-muted-foreground"}`}>Email</span>
+          </div>
+          
+          <div className={`h-[2px] w-8 rounded transition-all duration-300 ${
+            step !== "email" ? "bg-red-500" : "bg-border/60"
+          }`} />
+
+          <div className="flex items-center gap-2">
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${
+              step === "otp" ? "bg-red-500 text-white shadow-md shadow-red-500/25 ring-2 ring-red-500/50" : 
+              step === "password" ? "bg-red-500 text-white" : "bg-muted/80 text-muted-foreground border border-border"
+            }`}>
+              <FaKey />
+            </div>
+            <span className={`text-xs font-semibold ${step === "otp" ? "text-foreground" : "text-muted-foreground"}`}>Verify</span>
           </div>
 
+          <div className={`h-[2px] w-8 rounded transition-all duration-300 ${
+            step === "password" ? "bg-red-500" : "bg-border/60"
+          }`} />
+
+          <div className="flex items-center gap-2">
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${
+              step === "password" ? "bg-red-500 text-white shadow-md shadow-red-500/25 ring-2 ring-red-500/50" : "bg-muted/80 text-muted-foreground border border-border"
+            }`}>
+              <FaLock />
+            </div>
+            <span className={`text-xs font-semibold ${step === "password" ? "text-foreground" : "text-muted-foreground"}`}>Security</span>
+          </div>
+        </div>
+
+        <Card className="border-border/60 shadow-xl bg-card/70 backdrop-blur-xl rounded-2xl overflow-hidden">
           <CardHeader className="space-y-1.5 pb-6 pt-6">
             <CardTitle className="text-2xl font-extrabold tracking-tight text-center">
-              {loginMethod === "password"
-                ? "Welcome back"
-                : otpStep === "email"
-                ? "Passwordless Sign In"
-                : "Verify OTP Code"}
+              {step === "email" && "Unified Sign In"}
+              {step === "otp" && "Verify Email Code"}
+              {step === "password" && (userExists ? "Confirm Password" : "Setup Profile")}
             </CardTitle>
             <CardDescription className="text-center text-sm text-muted-foreground">
-              {loginMethod === "password"
-                ? "Enter your credentials to access your dashboard"
-                : otpStep === "email"
-                ? "We will email you a 6-digit OTP verification code"
-                : `We sent a temporary access code to ${otpEmail}`}
+              {step === "email" && "Enter your email address to get started"}
+              {step === "otp" && `We sent a 6-digit verification code to ${email}`}
+              {step === "password" && (userExists ? "Enter your password to log in" : "Since this is your first time, let's complete your profile")}
             </CardDescription>
           </CardHeader>
 
           <CardContent>
             <AnimatePresence mode="wait">
-              {/* PASSWORD METHOD */}
-              {loginMethod === "password" && (
+              {step === "email" && (
                 <motion.form
-                  key="password-form"
-                  initial={{ opacity: 0, x: -10 }}
+                  key="email-step"
+                  initial={{ opacity: 0, x: -15 }}
                   animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 10 }}
+                  exit={{ opacity: 0, x: 15 }}
                   transition={{ duration: 0.2 }}
-                  onSubmit={handleSubmit}
+                  onSubmit={handleSendOtp}
                   className="space-y-4"
                 >
-                  {/* Email Field */}
                   <div className="space-y-1.5">
                     <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block">
                       Email Address
@@ -306,39 +319,166 @@ export default function LoginPage() {
                         <FaEnvelope className="text-sm" />
                       </span>
                       <Input
-                        name="email"
                         type="email"
                         placeholder="name@example.com"
-                        value={form.email}
-                        onChange={handleChange}
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
                         className="pl-10 h-11 bg-input/5 backdrop-blur-sm rounded-xl"
                         required
+                        disabled={loading}
                       />
                     </div>
                   </div>
 
+                  <Button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full h-11 bg-red-500 hover:bg-red-600 text-white font-semibold shadow-md shadow-red-500/25 rounded-xl mt-6 transition-all duration-200"
+                  >
+                    {loading ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <FaSpinner className="animate-spin text-sm" /> Sending OTP Code...
+                      </span>
+                    ) : (
+                      <span className="flex items-center justify-center gap-2">
+                        Get Started <FaArrowRight className="text-xs" />
+                      </span>
+                    )}
+                  </Button>
+                </motion.form>
+              )}
+
+              {step === "otp" && (
+                <motion.form
+                  key="otp-step"
+                  initial={{ opacity: 0, x: -15 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 15 }}
+                  transition={{ duration: 0.2 }}
+                  onSubmit={handleVerifyOtp}
+                  className="space-y-6"
+                >
+                  <div className="space-y-3">
+                    <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block text-center">
+                      Verification Code
+                    </label>
+                    <div className="flex justify-between gap-2 max-w-sm mx-auto" onPaste={handleOtpPaste}>
+                      {otp.map((digit, idx) => (
+                        <input
+                          key={idx}
+                          ref={(el) => (otpInputRefs.current[idx] = el)}
+                          type="text"
+                          inputMode="numeric"
+                          maxLength={1}
+                          value={digit}
+                          onChange={(e) => handleOtpChange(idx, e.target.value)}
+                          onKeyDown={(e) => handleOtpKeyDown(idx, e)}
+                          className="w-12 h-12 text-center text-xl font-extrabold text-foreground bg-input/5 backdrop-blur-sm border border-border/80 rounded-xl focus:border-red-500 focus:ring-1 focus:ring-red-500/50 outline-none transition-all duration-200 shadow-inner"
+                          required
+                          disabled={loading}
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <Button
+                      type="submit"
+                      disabled={loading}
+                      className="w-full h-11 bg-red-500 hover:bg-red-600 text-white font-semibold shadow-md shadow-red-500/25 rounded-xl transition-all duration-200"
+                    >
+                      {loading ? (
+                        <span className="flex items-center justify-center gap-2">
+                          <FaSpinner className="animate-spin text-sm" /> Verifying Code...
+                        </span>
+                      ) : (
+                        <span className="flex items-center justify-center gap-2">
+                          Verify Code <FaArrowRight className="text-xs" />
+                        </span>
+                      )}
+                    </Button>
+
+                    <div className="flex justify-between items-center text-xs mt-2 px-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setStep("email");
+                        }}
+                        className="text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1 font-semibold"
+                        disabled={loading}
+                      >
+                        <FaArrowLeft className="text-[10px]" /> Back to Email
+                      </button>
+                      
+                      <button
+                        type="button"
+                        disabled={timer > 0 || loading}
+                        onClick={() => handleSendOtp()}
+                        className="text-red-500 hover:text-red-600 disabled:text-muted-foreground transition-colors font-semibold"
+                      >
+                        {timer > 0 ? `Resend in ${timer}s` : "Resend Code"}
+                      </button>
+                    </div>
+                  </div>
+                </motion.form>
+              )}
+
+              {step === "password" && (
+                <motion.form
+                  key="password-step"
+                  initial={{ opacity: 0, x: -15 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 15 }}
+                  transition={{ duration: 0.2 }}
+                  onSubmit={handleCompleteAuth}
+                  className="space-y-4"
+                >
+                  {/* Name field - only for NEW users */}
+                  {!userExists && (
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block">
+                        Full Name
+                      </label>
+                      <div className="relative">
+                        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground/75">
+                          <FaUser className="text-sm" />
+                        </span>
+                        <Input
+                          type="text"
+                          placeholder="John Doe"
+                          value={name}
+                          onChange={(e) => setName(e.target.value)}
+                          className="pl-10 h-11 bg-input/5 backdrop-blur-sm rounded-xl"
+                          required
+                          disabled={loading}
+                        />
+                      </div>
+                    </div>
+                  )}
+
                   {/* Password Field */}
                   <div className="space-y-1.5">
                     <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block">
-                      Password
+                      {userExists ? "Password" : "Create Password"}
                     </label>
                     <div className="relative">
                       <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground/75">
                         <FaLock className="text-sm" />
                       </span>
                       <Input
-                        name="password"
                         type={showPassword ? "text" : "password"}
                         placeholder="••••••••"
-                        value={form.password}
-                        onChange={handleChange}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
                         className="pl-10 pr-10 h-11 bg-input/5 backdrop-blur-sm rounded-xl"
                         required
+                        disabled={loading}
                       />
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
                         className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors p-1"
+                        disabled={loading}
                       >
                         {showPassword ? (
                           <FaEyeSlash className="text-sm" />
@@ -349,167 +489,46 @@ export default function LoginPage() {
                     </div>
                   </div>
 
-                  {/* Submit Button */}
-                  <Button
-                    type="submit"
-                    disabled={loading}
-                    className="w-full h-11 bg-red-500 hover:bg-red-600 text-white font-semibold shadow-md shadow-red-500/25 rounded-xl mt-6 transition-all duration-200"
-                  >
-                    {loading ? (
-                      <span className="flex items-center justify-center gap-2">
-                        <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                        </svg>
-                        Signing in...
-                      </span>
-                    ) : (
-                      <span className="flex items-center justify-center gap-2">
-                        Sign In <FaArrowRight className="text-xs" />
-                      </span>
-                    )}
-                  </Button>
+                  <div className="space-y-3 pt-2">
+                    <Button
+                      type="submit"
+                      disabled={loading}
+                      className="w-full h-11 bg-red-500 hover:bg-red-600 text-white font-semibold shadow-md shadow-red-500/25 rounded-xl transition-all duration-200"
+                    >
+                      {loading ? (
+                        <span className="flex items-center justify-center gap-2">
+                          <FaSpinner className="animate-spin text-sm" /> Processing...
+                        </span>
+                      ) : userExists ? (
+                        <span className="flex items-center justify-center gap-2">
+                          Sign In <FaArrowRight className="text-xs" />
+                        </span>
+                      ) : (
+                        <span className="flex items-center justify-center gap-2">
+                          Complete Registration <FaArrowRight className="text-xs" />
+                        </span>
+                      )}
+                    </Button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setStep("otp");
+                      }}
+                      className="text-muted-foreground hover:text-foreground transition-colors flex items-center justify-center gap-1 font-semibold text-xs mx-auto mt-2"
+                      disabled={loading}
+                    >
+                      <FaArrowLeft className="text-[10px]" /> Back to OTP Code
+                    </button>
+                  </div>
                 </motion.form>
-              )}
-
-              {/* OTP METHOD */}
-              {loginMethod === "otp" && (
-                <motion.div
-                  key="otp-container"
-                  initial={{ opacity: 0, x: 10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -10 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  {otpStep === "email" ? (
-                    /* Step 1: Input Email */
-                    <form onSubmit={handleSendOtp} className="space-y-4">
-                      <div className="space-y-1.5">
-                        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block">
-                          Email Address
-                        </label>
-                        <div className="relative">
-                          <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground/75">
-                            <FaEnvelope className="text-sm" />
-                          </span>
-                          <Input
-                            type="email"
-                            placeholder="name@example.com"
-                            value={otpEmail}
-                            onChange={(e) => setOtpEmail(e.target.value)}
-                            className="pl-10 h-11 bg-input/5 backdrop-blur-sm rounded-xl"
-                            required
-                          />
-                        </div>
-                      </div>
-
-                      <Button
-                        type="submit"
-                        disabled={loading}
-                        className="w-full h-11 bg-red-500 hover:bg-red-600 text-white font-semibold shadow-md shadow-red-500/25 rounded-xl mt-6 transition-all duration-200"
-                      >
-                        {loading ? (
-                          <span className="flex items-center justify-center gap-2">
-                            <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
-                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                            </svg>
-                            Sending Code...
-                          </span>
-                        ) : (
-                          <span className="flex items-center justify-center gap-2">
-                            Send Verification Code <FaPaperPlane className="text-xs" />
-                          </span>
-                        )}
-                      </Button>
-                    </form>
-                  ) : (
-                    /* Step 2: Verify 6-digit Code */
-                    <form onSubmit={handleVerifyOtp} className="space-y-6">
-                      <div className="space-y-3">
-                        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block text-center">
-                          Verification Code
-                        </label>
-                        
-                        {/* 6 Digit Input Grid */}
-                        <div className="flex justify-between gap-2 max-w-sm mx-auto" onPaste={handleOtpPaste}>
-                          {otp.map((digit, idx) => (
-                            <input
-                              key={idx}
-                              ref={(el) => (otpInputRefs.current[idx] = el)}
-                              type="text"
-                              inputMode="numeric"
-                              maxLength={1}
-                              value={digit}
-                              onChange={(e) => handleOtpChange(idx, e.target.value)}
-                              onKeyDown={(e) => handleOtpKeyDown(idx, e)}
-                              className="w-12 h-12 text-center text-xl font-extrabold text-foreground bg-input/5 backdrop-blur-sm border border-border/80 rounded-xl focus:border-red-500 focus:ring-1 focus:ring-red-500/50 outline-none transition-all duration-200 shadow-inner"
-                              required
-                            />
-                          ))}
-                        </div>
-                      </div>
-
-
-
-                      <div className="space-y-3">
-                        <Button
-                          type="submit"
-                          disabled={loading}
-                          className="w-full h-11 bg-red-500 hover:bg-red-600 text-white font-semibold shadow-md shadow-red-500/25 rounded-xl transition-all duration-200"
-                        >
-                          {loading ? (
-                            <span className="flex items-center justify-center gap-2">
-                              <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
-                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                              </svg>
-                              Verifying Code...
-                            </span>
-                          ) : (
-                            <span className="flex items-center justify-center gap-2">
-                              Verify & Sign In <FaKey className="text-xs" />
-                            </span>
-                          )}
-                        </Button>
-
-                        <div className="flex justify-between items-center text-xs mt-2 px-1">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setOtpStep("email");
-                            }}
-                            className="text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1 font-semibold"
-                          >
-                            <FaArrowLeft className="text-[10px]" /> Change Email
-                          </button>
-                          
-                          <button
-                            type="button"
-                            disabled={timer > 0 || loading}
-                            onClick={() => handleSendOtp()}
-                            className="text-red-500 hover:text-red-600 disabled:text-muted-foreground transition-colors font-semibold"
-                          >
-                            {timer > 0 ? `Resend in ${timer}s` : "Resend Code"}
-                          </button>
-                        </div>
-                      </div>
-                    </form>
-                  )}
-                </motion.div>
               )}
             </AnimatePresence>
           </CardContent>
 
           <CardFooter className="flex flex-col space-y-4 border-t border-border/50 bg-muted/20 px-6 py-4 mt-6">
-            <div className="text-center text-sm text-muted-foreground">
-              Don't have an account?{" "}
-              <Link
-                href="/register"
-                className="font-semibold text-red-500 hover:text-red-600 underline underline-offset-4 transition-colors"
-              >
-                Create an account
-              </Link>
+            <div className="text-center text-xs text-muted-foreground leading-relaxed">
+              New to FinanceFlow? Just enter your email. The system will automatically guide you to create your secure account.
             </div>
           </CardFooter>
         </Card>
