@@ -21,7 +21,7 @@ import {
   FaReceipt,
 } from "react-icons/fa6";
 
-import ExpenseChart from "../components/dashboard/ExpenseChart";
+import AnalyticsDashboard from "../components/dashboard/AnalyticsDashboard";
 import IncomeForm from "../components/dashboard/income/income-form";
 import IncomeList from "../components/dashboard/income/income-list";
 import EditIncomeModal from "../components/dashboard/income/EditIncomeModal";
@@ -56,6 +56,7 @@ export default function Dashboard() {
   const [editOpen, setEditOpen] = useState(false);
   const [selectedIncome, setSelectedIncome] = useState(null);
   const [activeSection, setActiveSection] = useState("overview");
+  const [budgetLimit, setBudgetLimit] = useState(0);
 
   // Smooth scroll handler with offset for sticky navbar
   const scrollToSection = (id) => {
@@ -145,6 +146,20 @@ export default function Dashboard() {
       }
     }
   };
+  const fetchBudget = async () => {
+    const token = getToken();
+    if (!token) return;
+    try {
+      const res = await axios.get("/api/budget", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.data.success && res.data.budget) {
+        setBudgetLimit(res.data.budget.limit);
+      }
+    } catch (err) {
+      console.error("Failed to load budget limit", err);
+    }
+  };
 
   useEffect(() => {
     const token = getToken();
@@ -156,6 +171,7 @@ export default function Dashboard() {
     setIsLoggedIn(true);
     fetchExpenses();
     fetchIncome();
+    fetchBudget();
   }, [refreshKey]);
 
   const deleteIncome = async (id) => {
@@ -602,19 +618,11 @@ export default function Dashboard() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4 }}
             >
-              <Card className="rounded-2xl border-border/60 shadow-sm">
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center gap-2.5 text-base font-bold">
-                    <span className="w-8 h-8 bg-blue-500/15 text-blue-500 rounded-xl flex items-center justify-center text-sm">
-                      <FaChartPie />
-                    </span>
-                    Expense Analytics
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ExpenseChart expenses={expenses} />
-                </CardContent>
-              </Card>
+              <AnalyticsDashboard
+                expenses={expenses}
+                incomes={incomes}
+                budgetLimit={budgetLimit}
+              />
             </motion.div>
 
             <motion.div
