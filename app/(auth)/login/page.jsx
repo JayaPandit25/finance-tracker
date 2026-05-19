@@ -287,7 +287,7 @@ export default function LoginPage() {
         <Card className="border-border/60 shadow-xl bg-card/70 backdrop-blur-xl rounded-2xl overflow-hidden">
           <CardHeader className="space-y-1.5 pb-6 pt-6">
             <CardTitle className="text-2xl font-extrabold tracking-tight text-center">
-              {step === "email" && "Unified Sign In"}
+              {step === "email" && "Sign In"}
               {step === "otp" && "Verify Email Code"}
               {step === "password" && (userExists ? "Confirm Password" : "Setup Profile")}
             </CardTitle>

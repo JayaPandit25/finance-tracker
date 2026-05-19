@@ -30,6 +30,7 @@ import ExpenseList from "../components/dashboard/expense/expense-list";
 import BudgetCard from "../components/dashboard/budget/BudgetCard";
 import GoalsManager from "../components/dashboard/goals/GoalsManager";
 import FinancialInsights from "../components/dashboard/insights/FinancialInsights";
+import StockMarket from "../components/dashboard/StockMarket";
 
 import {
   Card,
@@ -73,7 +74,7 @@ export default function Dashboard() {
   useEffect(() => {
     if (!mounted) return;
 
-    const sections = ["overview", "income", "expenses", "goals", "analytics"];
+    const sections = ["overview", "income", "expenses", "goals", "market", "analytics"];
     
     const handleScroll = () => {
       const scrollPosition = window.scrollY;
@@ -208,6 +209,7 @@ export default function Dashboard() {
     { id: "income", label: "Income" },
     { id: "expenses", label: "Expenses" },
     { id: "goals", label: "Savings Goals" },
+    { id: "market", label: "Markets" },
     { id: "analytics", label: "Analytics" },
   ];
 
@@ -607,6 +609,28 @@ export default function Dashboard() {
                   refreshKey={refreshKey}
                   onGoalUpdated={() => setRefreshKey((p) => p + 1)}
                 />
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          {/* Stock Market Section */}
+          <motion.div
+            id="market"
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.39 }}
+          >
+            <Card className="rounded-2xl border-border/60 shadow-sm">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2.5 text-base font-bold">
+                  <span className="w-8 h-8 bg-red-500/15 text-red-500 rounded-xl flex items-center justify-center text-sm">
+                    <FaChartLine />
+                  </span>
+                  Stock Market Tracker
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <StockMarket />
               </CardContent>
             </Card>
           </motion.div>
