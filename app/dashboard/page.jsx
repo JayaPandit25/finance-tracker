@@ -225,59 +225,115 @@ export default function Dashboard() {
             </div>
           </div>
         </header>
-
         {/* ── HERO ── */}
-        <section className="relative overflow-hidden border-b border-border/40">
-          {/* Background blobs */}
-          <div className="absolute -top-32 -left-32 w-96 h-96 bg-red-500/10 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute -bottom-20 -right-20 w-80 h-80 bg-red-500/8 rounded-full blur-3xl pointer-events-none" />
+<section className="relative overflow-hidden border-b border-border/40">
+  {/* Background blobs */}
+  <div className="absolute -top-32 -left-32 w-96 h-96 bg-red-500/10 rounded-full blur-3xl pointer-events-none" />
+  <div className="absolute -bottom-20 -right-20 w-80 h-80 bg-red-500/8 rounded-full blur-3xl pointer-events-none" />
 
-          <div className="relative max-w-6xl mx-auto px-6 py-16 flex flex-col md:flex-row items-center justify-between gap-10">
-            <motion.div
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-              className="flex-1 space-y-4"
-            >
-              <span className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-red-500 bg-red-500/10 px-3 py-1.5 rounded-full">
-                <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-                Personal Finance Dashboard
-              </span>
+  {/* Floating Finance Icons */}
+  <motion.div
+    animate={{ y: [0, -18, 0] }}
+    transition={{ duration: 4, repeat: Infinity }}
+    className="absolute top-16 left-4 md:left-10 z-20"
+  >
+    <div className="w-16 h-16 md:w-20 md:h-20 rounded-3xl bg-emerald-500/10 backdrop-blur-md border border-emerald-500/20 flex items-center justify-center shadow-lg">
+      <FaWallet className="text-emerald-500 text-3xl md:text-4xl" />
+    </div>
+  </motion.div>
 
-              <h1 className="text-4xl md:text-6xl font-black leading-tight tracking-tight">
-                Track Smarter,<br />
-                <span className="text-red-500">Save Better.</span>
-              </h1>
+  <motion.div
+    animate={{ y: [0, 15, 0], rotate: [0, 5, -5, 0] }}
+    transition={{ duration: 5, repeat: Infinity }}
+    className="absolute top-12 right-4 md:right-10 z-20"
+  >
+    <div className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-blue-500/10 backdrop-blur-md border border-blue-500/20 flex items-center justify-center shadow-lg">
+      <FaChartPie className="text-blue-500 text-4xl md:text-5xl" />
+    </div>
+  </motion.div>
 
-              <p className="text-muted-foreground text-lg max-w-md leading-relaxed">
-                All your income, expenses, and analytics — unified in one clean dashboard.
-              </p>
-            </motion.div>
+  <motion.div
+    animate={{ y: [0, -12, 0] }}
+    transition={{ duration: 3.5, repeat: Infinity }}
+    className="absolute bottom-6 left-1/2 -translate-x-1/2 md:left-auto md:right-1/4 md:translate-x-0 z-20"
+  >
+    <div className="w-14 h-14 md:w-16 md:h-16 rounded-2xl bg-red-500/10 backdrop-blur-md border border-red-500/20 flex items-center justify-center shadow-lg">
+      <FaMoneyBillWave className="text-red-500 text-2xl md:text-3xl" />
+    </div>
+  </motion.div>
 
-            {/* Mini stats strip */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.2, duration: 0.5 }}
-              className="flex-shrink-0 grid grid-cols-2 gap-3 w-full md:w-72"
-            >
-              {[
-                { label: "Income Entries", value: incomes.length, color: "text-emerald-500" },
-                { label: "Expense Entries", value: expenses.length, color: "text-red-500" },
-                { label: "Savings Rate", value: `${savingsRate}%`, color: "text-violet-500" },
-                { label: "Net Balance", value: `₹${balance.toLocaleString()}`, color: balance >= 0 ? "text-blue-500" : "text-red-500" },
-              ].map((stat) => (
-                <div
-                  key={stat.label}
-                  className="bg-muted/50 border border-border/50 rounded-2xl p-4 space-y-1"
-                >
-                  <p className={`text-xl font-black ${stat.color}`}>{stat.value}</p>
-                  <p className="text-xs text-muted-foreground font-medium">{stat.label}</p>
-                </div>
-              ))}
-            </motion.div>
-          </div>
-        </section>
+  <div className="relative max-w-6xl mx-auto px-6 py-16 flex flex-col md:flex-row items-center justify-between gap-10">
+
+    {/* Left Content */}
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+      className="flex-1 space-y-4"
+    >
+      <span className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-red-500 bg-red-500/10 px-3 py-1.5 rounded-full">
+        <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+        Personal Finance Dashboard
+      </span>
+
+      <h1 className="text-4xl md:text-6xl font-black leading-tight tracking-tight">
+        Track Smarter,
+        <br />
+        <span className="text-red-500">Save Better.</span>
+      </h1>
+
+      <p className="text-muted-foreground text-lg max-w-md leading-relaxed">
+        All your income, expenses, and analytics — unified in one clean dashboard.
+      </p>
+    </motion.div>
+
+    {/* Mini stats strip */}
+    <motion.div
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ delay: 0.2, duration: 0.5 }}
+      className="flex-shrink-0 grid grid-cols-2 gap-3 w-full md:w-72"
+    >
+      {[
+        {
+          label: "Income Entries",
+          value: incomes.length,
+          color: "text-emerald-500",
+        },
+        {
+          label: "Expense Entries",
+          value: expenses.length,
+          color: "text-red-500",
+        },
+        {
+          label: "Savings Rate",
+          value: `${savingsRate}%`,
+          color: "text-violet-500",
+        },
+        {
+          label: "Net Balance",
+          value: `₹${balance.toLocaleString()}`,
+          color: balance >= 0 ? "text-blue-500" : "text-red-500",
+        },
+      ].map((stat) => (
+        <div
+          key={stat.label}
+          className="bg-muted/50 border border-border/50 rounded-2xl p-4 space-y-1"
+        >
+          <p className={`text-xl font-black ${stat.color}`}>
+            {stat.value}
+          </p>
+          <p className="text-xs text-muted-foreground font-medium">
+            {stat.label}
+          </p>
+        </div>
+      ))}
+    </motion.div>
+  </div>
+</section>
+
+       
+   
 
         {/* ── MAIN CONTENT ── */}
         <main className="max-w-6xl mx-auto px-6 py-10 space-y-8">
