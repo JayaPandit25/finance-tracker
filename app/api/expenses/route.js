@@ -61,6 +61,13 @@ export async function POST(req) {
   } catch (error) {
     console.error("POST Expense Error:", error);
 
+    if (error.name === "JsonWebTokenError" || error.name === "TokenExpiredError" || error.name === "NotBeforeError") {
+      return NextResponse.json(
+        { success: false, message: "Invalid or expired token" },
+        { status: 401 }
+      );
+    }
+
     return NextResponse.json(
       {
         success: false,
@@ -112,6 +119,13 @@ export async function GET(req) {
     );
   } catch (error) {
     console.error("GET Expense Error:", error);
+
+    if (error.name === "JsonWebTokenError" || error.name === "TokenExpiredError" || error.name === "NotBeforeError") {
+      return NextResponse.json(
+        { success: false, message: "Invalid or expired token" },
+        { status: 401 }
+      );
+    }
 
     return NextResponse.json(
       {
@@ -189,6 +203,13 @@ export async function DELETE(req) {
     );
   } catch (error) {
     console.error("DELETE Expense Error:", error);
+
+    if (error.name === "JsonWebTokenError" || error.name === "TokenExpiredError" || error.name === "NotBeforeError") {
+      return NextResponse.json(
+        { success: false, message: "Invalid or expired token" },
+        { status: 401 }
+      );
+    }
 
     return NextResponse.json(
       {

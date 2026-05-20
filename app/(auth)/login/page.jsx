@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Script from "next/script";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
 import { 
@@ -17,7 +18,8 @@ import {
   FaArrowLeft, 
   FaUser, 
   FaCircleCheck, 
-  FaSpinner 
+  FaSpinner,
+  FaGoogle
 } from "react-icons/fa6";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -55,6 +57,58 @@ export default function LoginPage() {
     }
     return () => clearInterval(interval);
   }, [timer]);
+
+  // Handler: Real Google Login
+  const handleGoogleLogin = () => {
+    if (!window.google) {
+      toast.error("Google Sign-In is still loading. Please try again in a few seconds.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "172360914049-1kqqj3a6vs9m8lb2i6fpcoblin3tcn94.apps.googleusercontent.com";
+      const tokenClient = window.google.accounts.oauth2.initTokenClient({
+        client_id: clientId,
+        scope: "openid email profile",
+        callback: async (tokenResponse) => {
+          if (tokenResponse && tokenResponse.access_token) {
+            toast.success("Verifying credentials with Google...");
+            try {
+              const res = await axios.post("/api/auth/google", {
+                accessToken: tokenResponse.access_token,
+              });
+
+              if (res.data.success) {
+                localStorage.setItem("token", res.data.token);
+                toast.success(
+                  <span className="flex items-center gap-1.5">
+                    Google Login Successful! Welcome back. <FaCircleCheck className="text-red-500" />
+                  </span>
+                );
+                router.push("/dashboard");
+              } else {
+                toast.error(res.data.message || "Failed to log in with Google");
+                setLoading(false);
+              }
+            } catch (err) {
+              console.error("Google verify error:", err);
+              toast.error(err.response?.data?.message || "An error occurred during verification.");
+              setLoading(false);
+            }
+          } else {
+            toast.error("Google authentication was cancelled or failed.");
+            setLoading(false);
+          }
+        },
+      });
+      tokenClient.requestAccessToken();
+    } catch (err) {
+      console.error("Google token client init error:", err);
+      toast.error("Could not initialize Google client.");
+      setLoading(false);
+    }
+  };
 
   // Handler: Send OTP (Step 1)
   const handleSendOtp = async (e) => {
@@ -215,6 +269,7 @@ export default function LoginPage() {
 
   return (
     <div className="relative min-h-screen flex items-center justify-center bg-background px-4 py-12 overflow-hidden">
+      <Script src="https://accounts.google.com/gsi/client" strategy="afterInteractive" />
       {/* Decorative Blur Blobs */}
       <div className="absolute -top-40 -left-40 w-96 h-96 bg-red-500/10 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute -bottom-40 -right-40 w-96 h-96 bg-red-600/8 rounded-full blur-3xl pointer-events-none" />
@@ -310,6 +365,25 @@ export default function LoginPage() {
                   onSubmit={handleSendOtp}
                   className="space-y-4"
                 >
+                  <Button
+                    type="button"
+                    disabled={loading}
+                    onClick={handleGoogleLogin}
+                    className="w-full h-11 bg-white hover:bg-neutral-50 text-neutral-900 border border-neutral-200 font-semibold shadow-sm rounded-xl transition-all duration-200 flex items-center justify-center gap-2"
+                  >
+                    <FaGoogle className="text-red-500 text-base" />
+                    Continue with Google
+                  </Button>
+
+                  <div className="relative my-6 flex items-center justify-center">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t border-border/60"></div>
+                    </div>
+                    <span className="relative px-3 bg-[#18181b]/95 text-xs text-muted-foreground uppercase font-semibold tracking-wider">
+                      or connect with email
+                    </span>
+                  </div>
+
                   <div className="space-y-1.5">
                     <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block">
                       Email Address

@@ -27,6 +27,9 @@ export async function GET(req) {
     return NextResponse.json({ success: true, budget }, { status: 200 });
   } catch (error) {
     console.error("GET Budget Error:", error);
+    if (error.name === "JsonWebTokenError" || error.name === "TokenExpiredError" || error.name === "NotBeforeError") {
+      return NextResponse.json({ success: false, message: "Invalid or expired token" }, { status: 401 });
+    }
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
@@ -67,6 +70,9 @@ export async function POST(req) {
     );
   } catch (error) {
     console.error("POST Budget Error:", error);
+    if (error.name === "JsonWebTokenError" || error.name === "TokenExpiredError" || error.name === "NotBeforeError") {
+      return NextResponse.json({ success: false, message: "Invalid or expired token" }, { status: 401 });
+    }
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }

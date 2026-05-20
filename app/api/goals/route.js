@@ -26,6 +26,9 @@ export async function GET(req) {
     return NextResponse.json({ success: true, goals }, { status: 200 });
   } catch (error) {
     console.error("GET Goals Error:", error);
+    if (error.name === "JsonWebTokenError" || error.name === "TokenExpiredError" || error.name === "NotBeforeError") {
+      return NextResponse.json({ success: false, message: "Invalid or expired token" }, { status: 401 });
+    }
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
@@ -72,6 +75,9 @@ export async function POST(req) {
     );
   } catch (error) {
     console.error("POST Goal Error:", error);
+    if (error.name === "JsonWebTokenError" || error.name === "TokenExpiredError" || error.name === "NotBeforeError") {
+      return NextResponse.json({ success: false, message: "Invalid or expired token" }, { status: 401 });
+    }
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
@@ -121,6 +127,9 @@ export async function PATCH(req) {
     );
   } catch (error) {
     console.error("PATCH Goal Error:", error);
+    if (error.name === "JsonWebTokenError" || error.name === "TokenExpiredError" || error.name === "NotBeforeError") {
+      return NextResponse.json({ success: false, message: "Invalid or expired token" }, { status: 401 });
+    }
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
@@ -170,6 +179,9 @@ export async function DELETE(req) {
     );
   } catch (error) {
     console.error("DELETE Goal Error:", error);
+    if (error.name === "JsonWebTokenError" || error.name === "TokenExpiredError" || error.name === "NotBeforeError") {
+      return NextResponse.json({ success: false, message: "Invalid or expired token" }, { status: 401 });
+    }
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
