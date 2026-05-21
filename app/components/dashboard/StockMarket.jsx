@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
@@ -33,6 +33,8 @@ export default function StockMarket() {
   const [selectedStock, setSelectedStock] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [isAdding, setIsAdding] = useState(false);
+  const wsRef = useRef(null);
+  const [wsConnected, setWsConnected] = useState(false);
 
   // Load symbols from localStorage on mount
   useEffect(() => {
@@ -94,10 +96,65 @@ export default function StockMarket() {
   // Polling every 45 seconds for active stock pricing updates
   useEffect(() => {
     const interval = setInterval(() => {
-      fetchStocks(false);
+      // Only poll when WebSocket isn't connected
+      if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+        fetchStocks(false);
+      }
     }, 45000);
     return () => clearInterval(interval);
   }, [symbols, selectedStock]);
+
+  // WebSocket connection for real-time updates
+  useEffect(() => {
+    // Connect to local ws server
+    try {
+      const ws = new WebSocket(`ws://${window.location.hostname === 'localhost' ? 'localhost' : window.location.host.split(':')[0]}:8080`);
+      wsRef.current = ws;
+
+      ws.onopen = () => {
+        setWsConnected(true);
+        // subscribe to current symbols
+        ws.send(JSON.stringify({ type: 'subscribe', symbols }));
+      };
+
+      ws.onmessage = (evt) => {
+        try {
+          const msg = JSON.parse(evt.data);
+          if (msg?.type === 'stocks' && Array.isArray(msg.stocks)) {
+            setStocks(msg.stocks);
+            if (selectedStock) {
+              const updated = msg.stocks.find(s => s.symbol === selectedStock.symbol);
+              if (updated) setSelectedStock(prev => ({ ...prev, ...updated }));
+            }
+          }
+        } catch (err) {
+          console.warn('Invalid WS message', err);
+        }
+      };
+
+      ws.onclose = () => {
+        setWsConnected(false);
+      };
+
+      ws.onerror = () => {
+        setWsConnected(false);
+      };
+
+      return () => {
+        try { ws.close(); } catch (e) {}
+      };
+    } catch (err) {
+      console.warn('WebSocket not available', err);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Update subscription when symbols change
+  useEffect(() => {
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: 'subscribe', symbols }));
+    }
+  }, [symbols]);
 
   // Add stock ticker to watchlist
   const handleAddStock = async (e) => {
