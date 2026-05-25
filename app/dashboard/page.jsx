@@ -31,6 +31,8 @@ import BudgetCard from "../components/dashboard/budget/BudgetCard";
 import GoalsManager from "../components/dashboard/goals/GoalsManager";
 import FinancialInsights from "../components/dashboard/insights/FinancialInsights";
 import StockMarket from "../components/dashboard/StockMarket";
+import Chatbot from "../components/dashboard/Chatbot";
+
 
 import {
   Card,
@@ -686,7 +688,9 @@ export default function Dashboard() {
           income={selectedIncome}
           onUpdated={() => setRefreshKey((p) => p + 1)}
         />
+        <Chatbot />
       </motion.div>
+
     </AnimatePresence>
   );
 }
